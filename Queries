@@ -1,0 +1,31 @@
+##################################################################################
+#                              EM DESENVOLVIMENTO                                #
+##################################################################################
+
+# Detecta carregamento da DLL System.Management.Automation.dll
+#event_simpleName=ImageLoad
+ImageFileName="/System.Management.Automation.dll/i"
+
+// Join com informações do processo
+| join(
+    query={
+        #event_simpleName=ProcessRollup2
+        | table([ProcessId, ParentProcessId, CommandLine, UserName, ComputerName])
+    },
+    field=[ProcessId],
+    key=[ProcessId],
+    mode=left,
+    include=[CommandLine, UserName, ComputerName, ParentProcessId]
+)
+
+// Filtra apenas processos suspeitos (filtragem simples)
+| filter CommandLine="explorer.exe"
+| filter CommandLine="dllhost.exe"
+| filter CommandLine="svchost.exe"
+| filter CommandLine="powershell.exe"
+
+// Exibe colunas relevantes
+| table([@timestamp, aid, ComputerName, UserName, ProcessId, ParentProcessId, CommandLine, ImageFileName, sha256])
+
+###################################################################################################################
+
