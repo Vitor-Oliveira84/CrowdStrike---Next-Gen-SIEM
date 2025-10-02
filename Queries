@@ -28,4 +28,22 @@ ImageFileName="/System.Management.Automation.dll/i"
 | table([@timestamp, aid, ComputerName, UserName, ProcessId, ParentProcessId, CommandLine, ImageFileName, sha256])
 
 ###################################################################################################################
+# Detecta Campanha do Malware (Enviado pelo Whatsapp - Campanha ocorreu em 01/10/2025)
 
+# Script focado em detectar o primeiro estágio (download do artefato do whatsapp),
+
+#event_simpleName=MotwWritten 
+| HostUrl="https://web.whatsapp.com/"
+| regex("(?i)^(comprovante|or(?:c|ç)amento|new|doc).*\\.(zip|lnk)$", field=FileName)
+| table([@timestamp, ComputerName, FilePath, FileName])
+
+# Foca em identificar os arquivos .lnk que são criados após interação do usuário
+#repo=base_sensor event_platform=Win
+("#event_simpleName"="LnkFileWritten" OR "#event_simpleName"="NewExecutableWritten" OR "#event_simpleName"="MotwWritten")
+| src := coalesce([TargetFileName, FilePath])                     
+| FileName=/^(?:comprovante|or(?:ç|c)amento|new|doc)[^\\\/]*\.lnk$/i
+| src=/\.zip(?:\.[0-9]+)?[\\\/][^\\\/]+\.lnk$/i                   
+| zip_name := replace("^.[\\\\/]([^\\\\/:]+\\.zip)(?:\\.[0-9]+)?[\\\\/].$", with="$1", field=src)
+| table([@timestamp, ComputerName, ContextBaseFileName, FileName, zip_name, src, ReferrerUrl])
+
+#########################################################################################################################
